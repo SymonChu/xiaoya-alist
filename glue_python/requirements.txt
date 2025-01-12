@@ -1,0 +1,7 @@
+flask
+pillow
+qrcode
+argparse
+requests
+pycryptodome
+aligo

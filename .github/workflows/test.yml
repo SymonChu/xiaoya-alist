@@ -6,45 +6,58 @@ on:
   pull_request:
 
 jobs:
-  # test:
-  #   runs-on: ubuntu-latest
-  #   name: Test
-  #   steps:
-  #     -
-  #       name: Checkout
-  #       uses: actions/checkout@v4
-
-  #     - name: Test
-  #       run: |
-  #           bash main.sh test
-
-  shellcheck:
+  sh-checker:
     runs-on: ubuntu-latest
-    name: Shellcheck
+    name: sh-checker
     steps:
       -
         name: Checkout
         uses: actions/checkout@v4
 
-      - name: Shellcheck
-        run: |
-            shellcheck main.sh
-            shellcheck emby_config_editor.sh
+      - 
+        name: Run sh-checker
+        uses: luizm/action-sh-checker@v0.9.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHFMT_OPTS: -d -i 4 -sr
+        with:
+          sh_checker_comment: true
 
-  shfmt:
+  ruff:
     runs-on: ubuntu-latest
-    name: shfmt
     steps:
-      -
+      - 
         name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare
-        run: |
-            wget https://github.com/mvdan/sh/releases/download/v3.3.1/shfmt_v3.3.1_linux_amd64 -O ./shfmt
-            chmod +x shfmt
+      - 
+        name: Ruff
+        uses: astral-sh/ruff-action@v3
 
-      - name: shfmt
+  pylint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+
+      - 
+        name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
         run: |
-            ./shfmt -d -i 4 -sr main.sh
-            ./shfmt -d -i 4 -sr emby_config_editor.sh
+          python -m pip install --upgrade pip
+          pip install pylint
+          pip install typing-extensions
+          pip install -r aliyuntvtoken_connector/requirements.txt
+          pip install -r glue_python/requirements.txt
+
+      - name: Analysing the code with pylint
+        run: |
+          pylint --rcfile=$(pwd)/.pylintrc --disable=R,C0301 $(git ls-files '*.py')
